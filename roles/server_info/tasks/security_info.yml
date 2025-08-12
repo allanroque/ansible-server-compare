@@ -56,7 +56,7 @@
   ansible.builtin.shell: |
     if [ -f /etc/ssh/sshd_config ]; then
       echo "=== SSH Configuration ==="
-      grep -E '^(Port|PermitRootLogin|PasswordAuthentication|PubkeyAuthentication|Protocol)' /etc/ssh/sshd_config
+      grep -E '^(Port|PermitRootLogin|PasswordAuthentication|PubkeyAuthentication|Protocol)' /etc/ssh/sshd_config || echo "No matching SSH configurations found"
     else
       echo "SSH config not found"
     fi
