@@ -21,16 +21,30 @@
 
 - name: Load server information from JSON files
   ansible.builtin.slurp:
-    src: "reports/{{ item.item }}_info.json"
+    src: "reports/{{ item }}_info.json"
   register: server_data
-  loop: "{{ server_files_check.results | selectattr('stat.exists') | list }}"
+  loop: "{{ groups['servers'] }}"
   delegate_to: localhost
-  when: (server_files_check.results | selectattr('stat.exists') | list | length) > 0
+  ignore_errors: true
+
+- name: Debug loaded data
+  ansible.builtin.debug:
+    msg: |
+      Dados carregados:
+      {% for result in server_data.results %}
+      {% if result.content is defined %}
+      ✅ {{ result.item }}: Dados carregados com sucesso
+      {% else %}
+      ❌ {{ result.item }}: Falha ao carregar dados
+      {% endif %}
+      {% endfor %}
+  delegate_to: localhost
+  when: server_data is defined and server_data.results is defined
 
 - name: Parse server information
   ansible.builtin.set_fact:
     servers_info: "{{ servers_info | default({}) | combine({item.item: (item.content | b64decode | from_json)}) }}"
-  loop: "{{ server_data.results }}"
+  loop: "{{ server_data.results | selectattr('content') | list }}"
   delegate_to: localhost
   when: server_data is defined and server_data.results is defined
 
