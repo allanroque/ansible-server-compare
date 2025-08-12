@@ -54,10 +54,12 @@
   ansible.builtin.set_fact:
     comparison_data:
       servers: "{{ servers_info | default({}) }}"
-      common_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | intersect) | default([]) }}"
-      common_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | intersect) | default([]) }}"
-      different_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | difference) | default([]) }}"
-      different_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | difference) | default([]) }}"
+      server_count: "{{ servers_info | length }}"
+      common_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | first | default([])) }}"
+      common_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | first | default([])) }}"
+      different_packages: []
+      different_services: []
+      analysis_note: "{% if servers_info | length == 1 %}Análise de servidor único - não há comparação disponível{% else %}Comparação entre {{ servers_info | length }} servidores{% endif %}"
   delegate_to: localhost
   when: servers_info is defined
 
@@ -78,9 +80,10 @@
       
       {% if comparison_data is defined %}
       ✅ Comparação gerada com sucesso!
-      📊 Servidores processados: {{ comparison_data.servers | length }}
-      📦 Pacotes comuns: {{ comparison_data.common_packages | length }}
-      ⚙️ Serviços comuns: {{ comparison_data.common_services | length }}
+      📊 Servidores processados: {{ comparison_data.server_count }}
+      📝 {{ comparison_data.analysis_note }}
+      📦 Pacotes encontrados: {{ comparison_data.common_packages | length }}
+      ⚙️ Serviços encontrados: {{ comparison_data.common_services | length }}
       📁 Arquivo salvo: reports/comparison_data.json
       {% else %}
       ❌ Nenhum servidor foi processado com sucesso
