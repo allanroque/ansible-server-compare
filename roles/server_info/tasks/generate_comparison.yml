@@ -1,10 +1,31 @@
 ---
-- name: Load server information from JSON files
-  ansible.builtin.slurp:
-    src: "reports/{{ item }}_info.json"
-  register: server_data
+- name: Check which server JSON files exist
+  ansible.builtin.stat:
+    path: "reports/{{ item }}_info.json"
+  register: server_files_check
   loop: "{{ groups['servers'] }}"
   delegate_to: localhost
+
+- name: Display server file status
+  ansible.builtin.debug:
+    msg: |
+      Servidores com arquivos JSON:
+      {% for result in server_files_check.results %}
+      {% if result.stat.exists %}
+      ✅ {{ result.item }}: {{ result.stat.path }}
+      {% else %}
+      ❌ {{ result.item }}: Arquivo não encontrado
+      {% endif %}
+      {% endfor %}
+  delegate_to: localhost
+
+- name: Load server information from JSON files
+  ansible.builtin.slurp:
+    src: "reports/{{ item.item }}_info.json"
+  register: server_data
+  loop: "{{ server_files_check.results | selectattr('stat.exists') | list }}"
+  delegate_to: localhost
+  when: (server_files_check.results | selectattr('stat.exists') | list | length) > 0
 
 - name: Parse server information
   ansible.builtin.set_fact:
