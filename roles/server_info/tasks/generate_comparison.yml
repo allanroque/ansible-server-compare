@@ -32,20 +32,44 @@
     servers_info: "{{ servers_info | default({}) | combine({item.item: (item.content | b64decode | from_json)}) }}"
   loop: "{{ server_data.results }}"
   delegate_to: localhost
+  when: server_data is defined and server_data.results is defined
 
 - name: Generate comparison data
   ansible.builtin.set_fact:
     comparison_data:
-      servers: "{{ servers_info }}"
+      servers: "{{ servers_info | default({}) }}"
       common_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | intersect) | default([]) }}"
       common_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | intersect) | default([]) }}"
       different_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | difference) | default([]) }}"
       different_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | difference) | default([]) }}"
   delegate_to: localhost
+  when: servers_info is defined
 
 - name: Save comparison data
   ansible.builtin.copy:
     content: "{{ comparison_data | to_nice_json }}"
     dest: "reports/comparison_data.json"
     mode: '0644'
+  delegate_to: localhost
+  when: comparison_data is defined
+
+- name: Display comparison summary
+  ansible.builtin.debug:
+    msg: |
+      ========================================
+      RESUMO DA COMPARAÇÃO
+      ========================================
+      
+      {% if comparison_data is defined %}
+      ✅ Comparação gerada com sucesso!
+      📊 Servidores processados: {{ comparison_data.servers | length }}
+      📦 Pacotes comuns: {{ comparison_data.common_packages | length }}
+      ⚙️ Serviços comuns: {{ comparison_data.common_services | length }}
+      📁 Arquivo salvo: reports/comparison_data.json
+      {% else %}
+      ❌ Nenhum servidor foi processado com sucesso
+      🔍 Verifique se os arquivos JSON foram gerados corretamente
+      {% endif %}
+      
+      ========================================
   delegate_to: localhost
