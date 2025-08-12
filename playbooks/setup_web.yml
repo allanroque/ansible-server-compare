@@ -1,0 +1,37 @@
+---
+- name: Setup Apache web interface
+  hosts: webserver
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Create web directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: apache
+        group: apache
+      loop:
+        - /var/www/html/report
+        - /var/www/html/report/data
+        - /var/www/html/report/css
+        - /var/www/html/report/js
+
+  roles:
+    - web_setup
+
+  post_tasks:
+    - name: Display access information
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          RELATÓRIO WEB CONFIGURADO COM SUCESSO!
+          ========================================
+          
+          Acesse o relatório em: http://localhost/report
+          
+          Para acessar de outras máquinas:
+          http://{{ ansible_default_ipv4.address }}/report
+          
+          ========================================

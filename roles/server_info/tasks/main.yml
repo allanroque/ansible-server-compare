@@ -1,0 +1,36 @@
+---
+- name: Gather system facts
+  setup:
+  tags: [facts]
+
+- name: Collect system information
+  include_tasks: system_info.yml
+  tags: [system]
+
+- name: Collect network information
+  include_tasks: network_info.yml
+  tags: [network]
+
+- name: Collect package information
+  include_tasks: packages_info.yml
+  tags: [packages]
+
+- name: Collect service information
+  include_tasks: services_info.yml
+  tags: [services]
+
+- name: Collect security information
+  include_tasks: security_info.yml
+  tags: [security]
+
+- name: Collect storage information
+  include_tasks: storage_info.yml
+  tags: [storage]
+
+- name: Save collected information to JSON
+  copy:
+    content: "{{ hostvars[inventory_hostname] | to_nice_json }}"
+    dest: "reports/{{ inventory_hostname }}_info.json"
+  delegate_to: localhost
+  run_once: true
+  tags: [save]

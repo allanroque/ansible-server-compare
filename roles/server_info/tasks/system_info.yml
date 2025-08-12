@@ -1,0 +1,57 @@
+---
+- name: Get system information
+  ansible.builtin.shell: |
+    cat /etc/os-release
+  register: os_release
+  changed_when: false
+
+- name: Get kernel version
+  ansible.builtin.shell: uname -r
+  register: kernel_version
+  changed_when: false
+
+- name: Get system uptime
+  ansible.builtin.shell: uptime
+  register: system_uptime
+  changed_when: false
+
+- name: Get CPU information
+  ansible.builtin.shell: |
+    echo "CPU Model: $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)"
+    echo "CPU Cores: $(nproc)"
+    echo "CPU Architecture: $(uname -m)"
+  register: cpu_info
+  changed_when: false
+
+- name: Get memory information
+  ansible.builtin.shell: |
+    echo "Total Memory: $(free -h | grep Mem | awk '{print $2}')"
+    echo "Available Memory: $(free -h | grep Mem | awk '{print $7}')"
+    echo "Memory Usage: $(free | grep Mem | awk '{printf("%.2f%%", $3/$2 * 100.0)}')"
+  register: memory_info
+  changed_when: false
+
+- name: Get load average
+  ansible.builtin.shell: cat /proc/loadavg
+  register: load_average
+  changed_when: false
+
+- name: Get timezone
+  ansible.builtin.shell: timedatectl show --property=Timezone --value
+  register: timezone
+  changed_when: false
+
+- name: Set system facts
+  ansible.builtin.set_fact:
+    system_info:
+      hostname: "{{ ansible_hostname }}"
+      os_release: "{{ os_release.stdout_lines }}"
+      kernel_version: "{{ kernel_version.stdout }}"
+      system_uptime: "{{ system_uptime.stdout }}"
+      cpu_info: "{{ cpu_info.stdout_lines }}"
+      memory_info: "{{ memory_info.stdout_lines }}"
+      load_average: "{{ load_average.stdout }}"
+      timezone: "{{ timezone.stdout }}"
+      distribution: "{{ ansible_distribution }}"
+      distribution_version: "{{ ansible_distribution_version }}"
+      architecture: "{{ ansible_architecture }}"

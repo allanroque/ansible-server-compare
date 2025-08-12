@@ -1,0 +1,55 @@
+---
+- name: Get installed packages (RPM-based)
+  ansible.builtin.shell: |
+    if command -v rpm >/dev/null 2>&1; then
+      rpm -qa --queryformat '%{NAME}-%{VERSION}-%{RELEASE}\n' | sort
+    else
+      echo "RPM not available"
+    fi
+  register: rpm_packages
+  changed_when: false
+
+- name: Get installed packages (DEB-based)
+  ansible.builtin.shell: |
+    if command -v dpkg >/dev/null 2>&1; then
+      dpkg -l | grep '^ii' | awk '{print $2 " " $3}'
+    else
+      echo "DPKG not available"
+    fi
+  register: deb_packages
+  changed_when: false
+
+- name: Get package manager information
+  ansible.builtin.shell: |
+    echo "Package Manager:"
+    if command -v yum >/dev/null 2>&1; then
+      echo "YUM: $(yum --version | head -1)"
+    elif command -v dnf >/dev/null 2>&1; then
+      echo "DNF: $(dnf --version | head -1)"
+    elif command -v apt >/dev/null 2>&1; then
+      echo "APT: $(apt --version | head -1)"
+    else
+      echo "Unknown package manager"
+    fi
+  register: package_manager_info
+  changed_when: false
+
+- name: Get kernel packages
+  ansible.builtin.shell: |
+    if command -v rpm >/dev/null 2>&1; then
+      rpm -qa | grep kernel
+    elif command -v dpkg >/dev/null 2>&1; then
+      dpkg -l | grep kernel
+    else
+      echo "No package manager found"
+    fi
+  register: kernel_packages
+  changed_when: false
+
+- name: Set package facts
+  ansible.builtin.set_fact:
+    packages_info:
+      rpm_packages: "{{ rpm_packages.stdout_lines }}"
+      deb_packages: "{{ deb_packages.stdout_lines }}"
+      package_manager: "{{ package_manager_info.stdout_lines }}"
+      kernel_packages: "{{ kernel_packages.stdout_lines }}"

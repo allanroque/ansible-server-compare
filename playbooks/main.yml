@@ -1,0 +1,70 @@
+---
+- name: Ansible Server Compare - Fluxo Completo
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Display start message
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          INICIANDO ANÁLISE DE SERVIDORES
+          ========================================
+          
+          Este playbook irá:
+          1. Coletar informações dos servidores
+          2. Comparar configurações
+          3. Gerar relatório web
+          4. Configurar Apache
+          
+          ========================================
+
+- name: Collect server information
+  hosts: servers
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Create reports directory
+      ansible.builtin.file:
+        path: reports
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+  roles:
+    - server_info
+
+- name: Generate comparison and setup web interface
+  hosts: webserver
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Generate comparison data
+      ansible.builtin.include_tasks: ../roles/server_info/tasks/generate_comparison.yml
+      delegate_to: localhost
+      run_once: true
+
+    - name: Setup Apache web interface
+      ansible.builtin.include_tasks: ../roles/web_setup/tasks/main.yml
+
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          ANÁLISE CONCLUÍDA COM SUCESSO!
+          ========================================
+          
+          ✅ Informações coletadas dos servidores
+          ✅ Comparação realizada
+          ✅ Relatório web gerado
+          ✅ Apache configurado
+          
+          🌐 Acesse o relatório em: http://localhost/report
+          
+          📁 Arquivos gerados em: ./reports/
+          
+          ========================================

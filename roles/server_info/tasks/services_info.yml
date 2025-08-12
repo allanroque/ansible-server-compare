@@ -1,0 +1,58 @@
+---
+- name: Get systemd services status
+  ansible.builtin.shell: |
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl list-units --type=service --state=running --no-pager
+    else
+      echo "systemctl not available"
+    fi
+  register: systemd_services
+  changed_when: false
+
+- name: Get enabled services
+  ansible.builtin.shell: |
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl list-unit-files --type=service --state=enabled --no-pager
+    else
+      echo "systemctl not available"
+    fi
+  register: enabled_services
+  changed_when: false
+
+- name: Get failed services
+  ansible.builtin.shell: |
+    if command -v systemctl >/dev/null 2>&1; then
+      systemctl list-units --type=service --state=failed --no-pager
+    else
+      echo "systemctl not available"
+    fi
+  register: failed_services
+  changed_when: false
+
+- name: Get init.d services (legacy)
+  ansible.builtin.shell: |
+    if [ -d /etc/init.d ]; then
+      ls -la /etc/init.d/ | grep -E '^-.*\.sh$|^-[a-zA-Z]'
+    else
+      echo "No init.d directory found"
+    fi
+  register: initd_services
+  changed_when: false
+
+- name: Get cron jobs
+  ansible.builtin.shell: |
+    echo "=== Root Cron Jobs ==="
+    crontab -l 2>/dev/null || echo "No root cron jobs"
+    echo "=== System Cron Jobs ==="
+    ls /etc/cron.*/ 2>/dev/null || echo "No system cron jobs"
+  register: cron_jobs
+  changed_when: false
+
+- name: Set service facts
+  ansible.builtin.set_fact:
+    services_info:
+      systemd_running: "{{ systemd_services.stdout_lines }}"
+      enabled_services: "{{ enabled_services.stdout_lines }}"
+      failed_services: "{{ failed_services.stdout_lines }}"
+      initd_services: "{{ initd_services.stdout_lines }}"
+      cron_jobs: "{{ cron_jobs.stdout_lines }}"

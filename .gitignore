@@ -1,0 +1,30 @@
+# Ansible
+*.retry
+*.pyc
+__pycache__/
+.cache/
+
+# Reports
+reports/
+*.json
+*.html
+
+# Inventory
+inventory/hosts
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp

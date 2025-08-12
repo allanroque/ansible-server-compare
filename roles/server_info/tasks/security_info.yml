@@ -1,0 +1,81 @@
+---
+- name: Get firewall status
+  ansible.builtin.shell: |
+    if command -v firewall-cmd >/dev/null 2>&1; then
+      echo "Firewalld Status: $(firewall-cmd --state)"
+      echo "Active Zones: $(firewall-cmd --get-active-zones)"
+    elif command -v ufw >/dev/null 2>&1; then
+      echo "UFW Status: $(ufw status)"
+    elif command -v iptables >/dev/null 2>&1; then
+      echo "IPTables Rules:"
+      iptables -L -n
+    else
+      echo "No firewall detected"
+    fi
+  register: firewall_info
+  changed_when: false
+
+- name: Get SELinux status
+  ansible.builtin.shell: |
+    if command -v sestatus >/dev/null 2>&1; then
+      sestatus
+    else
+      echo "SELinux not available"
+    fi
+  register: selinux_info
+  changed_when: false
+
+- name: Get user accounts
+  ansible.builtin.shell: |
+    echo "=== User Accounts ==="
+    cat /etc/passwd | grep -E ':/bin/bash$|:/bin/sh$'
+    echo "=== System Users ==="
+    cat /etc/passwd | grep -E ':/sbin/nologin$|:/bin/false$' | head -10
+  register: user_accounts
+  changed_when: false
+
+- name: Get sudo configuration
+  ansible.builtin.shell: |
+    if [ -f /etc/sudoers ]; then
+      echo "=== Sudoers Configuration ==="
+      grep -v '^#' /etc/sudoers | grep -v '^$'
+    fi
+    if [ -d /etc/sudoers.d ]; then
+      echo "=== Sudoers.d Files ==="
+      for file in /etc/sudoers.d/*; do
+        if [ -f "$file" ]; then
+          echo "File: $file"
+          grep -v '^#' "$file" | grep -v '^$' || echo "No rules"
+        fi
+      done
+    fi
+  register: sudo_config
+  changed_when: false
+
+- name: Get SSH configuration
+  ansible.builtin.shell: |
+    if [ -f /etc/ssh/sshd_config ]; then
+      echo "=== SSH Configuration ==="
+      grep -E '^(Port|PermitRootLogin|PasswordAuthentication|PubkeyAuthentication|Protocol)' /etc/ssh/sshd_config
+    else
+      echo "SSH config not found"
+    fi
+  register: ssh_config
+  changed_when: false
+
+- name: Get open ports
+  ansible.builtin.shell: |
+    echo "=== Open Ports ==="
+    ss -tlnp | grep LISTEN
+  register: open_ports
+  changed_when: false
+
+- name: Set security facts
+  ansible.builtin.set_fact:
+    security_info:
+      firewall: "{{ firewall_info.stdout_lines }}"
+      selinux: "{{ selinux_info.stdout_lines }}"
+      users: "{{ user_accounts.stdout_lines }}"
+      sudo: "{{ sudo_config.stdout_lines }}"
+      ssh: "{{ ssh_config.stdout_lines }}"
+      open_ports: "{{ open_ports.stdout_lines }}"

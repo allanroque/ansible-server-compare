@@ -1,0 +1,43 @@
+---
+- name: Get network interfaces
+  ansible.builtin.shell: ip addr show
+  register: network_interfaces
+  changed_when: false
+
+- name: Get routing table
+  ansible.builtin.shell: ip route show
+  register: routing_table
+  changed_when: false
+
+- name: Get DNS configuration
+  ansible.builtin.shell: cat /etc/resolv.conf
+  register: dns_config
+  changed_when: false
+
+- name: Get listening ports
+  ansible.builtin.shell: ss -tlnp
+  register: listening_ports
+  changed_when: false
+
+- name: Get network connections
+  ansible.builtin.shell: ss -tuln
+  register: network_connections
+  changed_when: false
+
+- name: Get hostname and domain
+  ansible.builtin.shell: |
+    echo "Hostname: $(hostname)"
+    echo "Domain: $(hostname -d 2>/dev/null || echo 'N/A')"
+    echo "FQDN: $(hostname -f 2>/dev/null || echo 'N/A')"
+  register: hostname_info
+  changed_when: false
+
+- name: Set network facts
+  ansible.builtin.set_fact:
+    network_info:
+      interfaces: "{{ network_interfaces.stdout_lines }}"
+      routing: "{{ routing_table.stdout_lines }}"
+      dns: "{{ dns_config.stdout_lines }}"
+      listening_ports: "{{ listening_ports.stdout_lines }}"
+      connections: "{{ network_connections.stdout_lines }}"
+      hostname_info: "{{ hostname_info.stdout_lines }}"

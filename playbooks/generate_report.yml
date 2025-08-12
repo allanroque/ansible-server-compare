@@ -1,0 +1,53 @@
+---
+- name: Generate server comparison report
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  tasks:
+    - name: Check if reports directory exists
+      ansible.builtin.stat:
+        path: reports
+      register: reports_dir
+
+    - name: Create reports directory if not exists
+      ansible.builtin.file:
+        path: reports
+        state: directory
+        mode: '0755'
+      when: not reports_dir.stat.exists
+
+    - name: Check if server data files exist
+      ansible.builtin.find:
+        paths: reports
+        patterns: "*_info.json"
+      register: server_files
+
+    - name: Generate comparison report
+      ansible.builtin.template:
+        src: templates/comparison_report.html.j2
+        dest: reports/comparison_report.html
+        mode: '0644'
+      when: server_files.files | length > 0
+
+    - name: Generate JSON summary
+      ansible.builtin.template:
+        src: templates/comparison_summary.json.j2
+        dest: reports/comparison_summary.json
+        mode: '0644'
+      when: server_files.files | length > 0
+
+    - name: Display report information
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          RELATÓRIO GERADO COM SUCESSO!
+          ========================================
+          
+          Arquivos gerados:
+          - reports/comparison_report.html
+          - reports/comparison_summary.json
+          
+          Servidores analisados: {{ server_files.files | length }}
+          
+          ========================================

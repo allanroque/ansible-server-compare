@@ -1,0 +1,30 @@
+---
+- name: Load server information from JSON files
+  ansible.builtin.slurp:
+    src: "reports/{{ item }}_info.json"
+  register: server_data
+  loop: "{{ groups['servers'] }}"
+  delegate_to: localhost
+
+- name: Parse server information
+  ansible.builtin.set_fact:
+    servers_info: "{{ servers_info | default({}) | combine({item.item: (item.content | b64decode | from_json)}) }}"
+  loop: "{{ server_data.results }}"
+  delegate_to: localhost
+
+- name: Generate comparison data
+  ansible.builtin.set_fact:
+    comparison_data:
+      servers: "{{ servers_info }}"
+      common_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | intersect) | default([]) }}"
+      common_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | intersect) | default([]) }}"
+      different_packages: "{{ (servers_info.values() | map(attribute='packages_info.rpm_packages') | list | difference) | default([]) }}"
+      different_services: "{{ (servers_info.values() | map(attribute='services_info.systemd_running') | list | difference) | default([]) }}"
+  delegate_to: localhost
+
+- name: Save comparison data
+  ansible.builtin.copy:
+    content: "{{ comparison_data | to_nice_json }}"
+    dest: "reports/comparison_data.json"
+    mode: '0644'
+  delegate_to: localhost

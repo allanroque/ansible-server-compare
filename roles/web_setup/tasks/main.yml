@@ -1,0 +1,63 @@
+---
+- name: Install Apache
+  ansible.builtin.package:
+    name: "{{ apache_package }}"
+    state: present
+  vars:
+    apache_package: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+
+- name: Install required packages
+  ansible.builtin.package:
+    name:
+      - python3
+      - python3-json
+    state: present
+
+- name: Create web directory
+  ansible.builtin.file:
+    path: /var/www/html/report
+    state: directory
+    mode: '0755'
+    owner: apache
+    group: apache
+
+- name: Copy web files
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/"
+    dest: /var/www/html/report/
+    mode: '0644'
+    owner: apache
+    group: apache
+
+- name: Copy reports to web directory
+  ansible.builtin.copy:
+    src: reports/
+    dest: /var/www/html/report/data/
+    mode: '0644'
+    owner: apache
+    group: apache
+
+- name: Configure Apache virtual host
+  ansible.builtin.template:
+    src: apache.conf.j2
+    dest: "{{ apache_config_path }}/report.conf"
+    mode: '0644'
+    owner: root
+    group: root
+  vars:
+    apache_config_path: "{{ '/etc/httpd/conf.d' if ansible_os_family == 'RedHat' else '/etc/apache2/sites-available' }}"
+
+- name: Enable site (Debian/Ubuntu)
+  ansible.builtin.file:
+    src: "{{ apache_config_path }}/report.conf"
+    dest: "{{ apache_config_path }}/../sites-enabled/report.conf"
+    state: link
+  when: ansible_os_family == "Debian"
+
+- name: Start and enable Apache
+  ansible.builtin.service:
+    name: "{{ apache_service }}"
+    state: started
+    enabled: true
+  vars:
+    apache_service: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"

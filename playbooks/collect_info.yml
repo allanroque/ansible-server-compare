@@ -1,0 +1,23 @@
+---
+- name: Collect server information
+  hosts: servers
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Create reports directory
+      ansible.builtin.file:
+        path: reports
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+
+  roles:
+    - server_info
+
+  post_tasks:
+    - name: Generate comparison report
+      ansible.builtin.include_tasks: ../roles/server_info/tasks/generate_comparison.yml
+      delegate_to: localhost
+      run_once: true

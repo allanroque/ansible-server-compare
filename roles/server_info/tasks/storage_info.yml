@@ -1,0 +1,56 @@
+---
+- name: Get disk usage
+  ansible.builtin.shell: df -h
+  register: disk_usage
+  changed_when: false
+
+- name: Get disk partitions
+  ansible.builtin.shell: lsblk -f
+  register: disk_partitions
+  changed_when: false
+
+- name: Get mount points
+  ansible.builtin.shell: cat /proc/mounts
+  register: mount_points
+  changed_when: false
+
+- name: Get LVM information
+  ansible.builtin.shell: |
+    if command -v lvs >/dev/null 2>&1; then
+      echo "=== Logical Volumes ==="
+      lvs
+      echo "=== Volume Groups ==="
+      vgs
+      echo "=== Physical Volumes ==="
+      pvs
+    else
+      echo "LVM not available"
+    fi
+  register: lvm_info
+  changed_when: false
+
+- name: Get RAID information
+  ansible.builtin.shell: |
+    if [ -f /proc/mdstat ]; then
+      echo "=== RAID Status ==="
+      cat /proc/mdstat
+    else
+      echo "No RAID detected"
+    fi
+  register: raid_info
+  changed_when: false
+
+- name: Get inode usage
+  ansible.builtin.shell: df -i
+  register: inode_usage
+  changed_when: false
+
+- name: Set storage facts
+  ansible.builtin.set_fact:
+    storage_info:
+      disk_usage: "{{ disk_usage.stdout_lines }}"
+      partitions: "{{ disk_partitions.stdout_lines }}"
+      mounts: "{{ mount_points.stdout_lines }}"
+      lvm: "{{ lvm_info.stdout_lines }}"
+      raid: "{{ raid_info.stdout_lines }}"
+      inodes: "{{ inode_usage.stdout_lines }}"
