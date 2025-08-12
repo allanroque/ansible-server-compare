@@ -45,7 +45,6 @@
   tasks:
     - name: Generate comparison data
       ansible.builtin.include_tasks: ../roles/server_info/tasks/generate_comparison.yml
-      delegate_to: localhost
       run_once: true
 
     - name: Setup Apache web interface
