@@ -35,7 +35,7 @@
       run_once: true
 
   roles:
-    - server_info
+    - ../roles/server_info
 
 - name: Generate comparison and setup web interface
   hosts: webserver
